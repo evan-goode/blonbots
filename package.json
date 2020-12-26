@@ -6,6 +6,7 @@
     "fuzzysort": "^1.1.4",
     "lodash": "^4.17.20",
     "minecraft-protocol": "^1.21.0",
+    "mineflayer": "^2.37.1",
     "sqlite": "^4.0.18",
     "sqlite3": "^5.0.0",
     "string-argv": "^0.3.1",

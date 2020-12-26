@@ -13,8 +13,8 @@ process.on('uncaughtException', function (exception) {
 	const dispatch = new Dispatch({
 		db,
 		username: "blon-dispatch",
-		host: "localhost",
-		port: 25566,
+		host: "vlad",
+		port: 25567,
 		commandPrefix: "\\",
 	});
 })();
