@@ -3,26 +3,48 @@ import { Vec3 } from "vec3";
 import fuzzysort from "fuzzysort";
 import sqlite3 from "sqlite3";
 import sqlite, { open } from "sqlite";
+import escapeStringRegExp from "escape-string-regexp";
+import { parseArgsStringToArgv } from "string-argv";
 
 import * as util from "./util";
 import { Bot, Blonbot, BotConfig } from "./blonbot";
 import { MineflayerBot } from "./mineflayer";
-import escapeStringRegExp from "escape-string-regexp";
-import { parseArgsStringToArgv } from "string-argv";
+import { XPManager, levelDifference, XP_PER_BOT } from "./xp";
+import { performance } from "perf_hooks";
 
 export interface DispatchConfig extends BotConfig {
 	db: sqlite.Database;
 	commandPrefix: string;
 }
 
-// TODO sleep
-// botxp
-// telegram
+const armorSets = [
+	{
+		relativeContainerLocation: new Vec3(0, -2, 1),
+		relativeChuteLocation: new Vec3(1, 0, 1),
+		slots: [0, 1, 2, 3],
+	},
+	{
+		relativeContainerLocation: new Vec3(0, -2, -1),
+		relativeChuteLocation: new Vec3(1, 0, -1),
+		slots: [0, 1, 2, 3],
+	},
+	{
+		relativeContainerLocation: new Vec3(1, -2, 0),
+		relativeChuteLocation: new Vec3(-1, 0, 1),
+		slots: [0, 1, 2, 3],
+	},
+	{
+		relativeContainerLocation: new Vec3(-1, -2, 0),
+		relativeChuteLocation: new Vec3(-1, 0, -1),
+		slots: [0, 1, 2, 3],
+	},
+];
 
 export class Dispatch extends Blonbot {
 	commandPrefix: string;
 	bots: Map<string, Bot>;
 	db: sqlite.Database;
+	xpManager: XPManager;
 	constructor(config: DispatchConfig) {
 		const { host, port, username } = config;
 		super({ host, port, username });
@@ -30,11 +52,12 @@ export class Dispatch extends Blonbot {
 		this.commandPrefix = config.commandPrefix;
 		this.client.on("chat", this.onChat.bind(this));
 		this.bots = new Map();
+		this.xpManager = new XPManager(this.host, this.port, armorSets);
 	}
-	static async openDb(path: string) {
+	static async openDb(path: string): Promise<sqlite.Database> {
 		const db = await open({
 			filename: path,
-			driver: sqlite3.Database
+			driver: sqlite3.Database,
 		});
 		await db.exec(`
 			CREATE TABLE IF NOT EXISTS teleport(
@@ -49,11 +72,11 @@ export class Dispatch extends Blonbot {
 		`);
 		return db;
 	}
-	async onChat(packet: any) {
+	async onChat(packet: any): Promise<void> {
 		const parsed = JSON.parse(packet.message);
 		const validTranslates = [
 			"commands.message.display.incoming",
-			"chat.type.text"
+			"chat.type.text",
 		];
 		if (!_.includes(validTranslates, parsed.translate)) return;
 
@@ -74,7 +97,6 @@ export class Dispatch extends Blonbot {
 		}
 		const match = message.match(regex);
 		if (match) {
-
 			const argv = parseArgsStringToArgv(match[1]);
 			const reply = (message: string) =>
 				this.chat(`/tell ${username} ${message}`);
@@ -86,7 +108,6 @@ export class Dispatch extends Blonbot {
 			}
 			return;
 		}
-
 
 		const coordinateMatch = message.match(
 			/(-?\d+(?:\.\d+)?)[,\s]\s*(-?\d+(?:\.\d+)?)/
@@ -103,13 +124,12 @@ export class Dispatch extends Blonbot {
 
 			return;
 		}
-
 	}
 	async handleCommand(
 		issuer: string,
 		argv: string[],
 		reply: (message: string) => void
-	) {
+	): Promise<void> {
 		const [command, ...args] = argv;
 		if (command === "summon") {
 			let username, behavior;
@@ -159,7 +179,7 @@ export class Dispatch extends Blonbot {
 			const zCoord = Math.floor(parseFloat(z));
 			const location = new Vec3(xCoord, yCoord, zCoord);
 			await this.tpset(
-				issuer,
+				username,
 				destinationName,
 				location,
 				blonbotUsername,
@@ -188,11 +208,37 @@ export class Dispatch extends Blonbot {
 				return;
 			}
 			await this.tprm(username, destination, reply);
+		} else if (command === "xp") {
+			let amount;
+			if (args.length !== 1) {
+				reply(`Usage: xp <amount>|stop>`);
+				reply(`xp 0-30`);
+				return;
+			}
+			const [arg] = args;
+			if (arg === "stop") {
+				this.stopXp(reply);
+				return;
+			}
+
+			const match = arg.match(/(\d+)-(\d+)/);
+			if (match) {
+				const startLevel = parseInt(match[1]);
+				const endLevel = parseInt(match[2]);
+				this.startXp(levelDifference(startLevel, endLevel), reply);
+				return;
+			}
+
+			this.startXp(parseInt(arg), reply);
 		} else {
 			reply(`Command "${command}" not found.`);
 		}
 	}
-	async summon(username: string, behavior: string | null, reply: (message: string) => void) {
+	async summon(
+		username: string,
+		behavior: string | null,
+		reply: (message: string) => void
+	): Promise<void> {
 		if (username === this.username) {
 			reply(`Can't summon myself!`);
 			return;
@@ -203,7 +249,7 @@ export class Dispatch extends Blonbot {
 			bot = new Blonbot({
 				username,
 				host: this.host,
-				port: this.port
+				port: this.port,
 			});
 			bot.setPersist(true);
 			bot.start();
@@ -215,14 +261,13 @@ export class Dispatch extends Blonbot {
 				port: this.port,
 			});
 			bot.setPersist(true);
-			console.log("doin behavior");
 			bot.pushBehavior(bot.behaviors[behavior]());
 			bot.start();
 			this.bots.set(username, bot);
 		}
 		reply(`Summoned ${username}.`);
 	}
-	async kick(username: string, reply: (message: string) => void) {
+	async kick(username: string, reply: (message: string) => void): Promise<void> {
 		const blonbot = this.bots.get(username);
 
 		if (!blonbot) {
@@ -233,19 +278,18 @@ export class Dispatch extends Blonbot {
 		blonbot.disconnect();
 
 		this.bots.delete(username);
-
 	}
 	async tp(
 		username: string,
 		fuzzyDestination: string,
 		reply: (message: string) => void
-	) {
+	): Promise<void> {
 		const teleports = await this.db.all(
 			"SELECT * from teleport WHERE username = ?",
 			username
 		);
 		const matches = fuzzysort.go(fuzzyDestination, teleports, {
-			key: "destination_name"
+			key: "destination_name",
 		});
 		if (!matches.length) {
 			reply(
@@ -260,22 +304,22 @@ export class Dispatch extends Blonbot {
 			blonbot = new Blonbot({
 				username: teleport.blonbot_username,
 				host: this.host,
-				port: this.port
+				port: this.port,
 			});
 		}
 		this.bots.set(teleport.blonbot_username, blonbot);
 
 		const teleportLocation = new Vec3(teleport.x, teleport.y, teleport.z);
-		blonbot.interrupt(blonbot.teleport(username, teleport.destination_name, teleportLocation));
+		blonbot.interrupt(
+			blonbot.teleport(
+				username,
+				teleport.destination_name,
+				teleportLocation
+			)
+		);
 		blonbot.start();
-
-		// await util.sleep(1000);
-
-		// blonbot.activateBlock(teleportLocation);
-
-		await util.sleep(1 * 1000); // wait for pearl to land
 	}
-	async tpls(username: string, reply: (message: string) => void) {
+	async tpls(username: string, reply: (message: string) => void): Promise<void> {
 		const teleports = await this.db.all(
 			"SELECT * from teleport WHERE username = ?",
 			username
@@ -285,7 +329,7 @@ export class Dispatch extends Blonbot {
 			return;
 		}
 		const teleportList = teleports
-			.map(teleport => teleport.destination_name)
+			.map((teleport) => teleport.destination_name)
 			.join(", ");
 		reply(
 			`${teleports.length} teleports set up for ${username}: ${teleportList}`
@@ -314,7 +358,7 @@ export class Dispatch extends Blonbot {
 				":x": location.x,
 				":y": location.y,
 				":z": location.z,
-				":blonbot_username": blonbotUsername
+				":blonbot_username": blonbotUsername,
 			}
 		);
 		reply(`Updated teleport "${destinationName}".`);
@@ -336,5 +380,21 @@ export class Dispatch extends Blonbot {
 			return;
 		}
 		reply(`Removed teleport "${destinationName}".`);
+	}
+	async startXp(amount: number, reply: (message: string) => void) {
+		const botCount = Math.ceil(amount / XP_PER_BOT);
+		if (this.xpManager.started) {
+			reply(`Already generating XP!`);
+			return;
+		}
+		reply(`Summoning ${botCount} XP bot(s) to generate ${amount} XP.`);
+		const startTime = performance.now() / 1000;
+		await this.xpManager.start(amount);
+		const endTime = performance.now() / 1000;
+		reply(`Generated ${amount} xp in ${endTime - startTime} seconds`);
+	}
+	stopXp(reply: (message: string) => void) {
+		this.xpManager.stop();
+		reply(`Stopped generating XP.`);
 	}
 }
