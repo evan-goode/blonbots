@@ -60,7 +60,7 @@ export abstract class Bot {
 					this.behaviorQueue.shift();
 				}
 			} else {
-				await emitter;
+				await emitter.next();
 			}
 		}
 		this.disconnect();
