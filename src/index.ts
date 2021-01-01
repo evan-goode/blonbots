@@ -12,9 +12,9 @@ process.on('uncaughtException', function (exception) {
 
 	const dispatch = new Dispatch({
 		db,
-		username: "blon-dispatch",
-		host: "vlad",
-		port: 25567,
+		username: process.env.USERNAME || "blon-dispatch",
+		host: process.env.HOST || "localhost",
+		port: (process.env.PORT && parseInt(process.env.PORT)) || 25565,
 		commandPrefix: "\\",
 	});
 })();

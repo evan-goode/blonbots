@@ -132,17 +132,18 @@ export class Dispatch extends Blonbot {
 	): Promise<void> {
 		const [command, ...args] = argv;
 		if (command === "summon") {
-			let username, behavior;
+			let username;
+			let behaviorArgs: string[];
 			if (args.length === 1) {
 				[username] = args;
-				behavior = null;
-			} else if (args.length === 2) {
-				[username, behavior] = args;
+				behaviorArgs = [];
+			} else if (args.length >= 2) {
+				[username, ...behaviorArgs] = args;
 			} else {
-				reply("Usage: summon <username>");
+				reply("Usage: summon <username> [behavior] [...args]");
 				return;
 			}
-			await this.summon(username, behavior, reply);
+			await this.summon(username, behaviorArgs, reply);
 		} else if (command === "kick") {
 			if (args.length !== 1) {
 				reply("Usage: kick <username>");
@@ -236,7 +237,7 @@ export class Dispatch extends Blonbot {
 	}
 	async summon(
 		username: string,
-		behavior: string | null,
+		behaviorArgv: string[] | null,
 		reply: (message: string) => void
 	): Promise<void> {
 		if (username === this.username) {
@@ -245,7 +246,7 @@ export class Dispatch extends Blonbot {
 		}
 
 		let bot;
-		if (behavior === null) {
+		if (behaviorArgv === null) {
 			bot = new Blonbot({
 				username,
 				host: this.host,
@@ -255,13 +256,14 @@ export class Dispatch extends Blonbot {
 			bot.start();
 			this.bots.set(username, bot);
 		} else {
+			const [behavior, ...args] = behaviorArgv;
 			bot = new MineflayerBot({
 				username,
 				host: this.host,
 				port: this.port,
 			});
 			bot.setPersist(true);
-			bot.pushBehavior(bot.behaviors[behavior]());
+			bot.pushBehavior(bot.behaviors[behavior](...args));
 			bot.start();
 			this.bots.set(username, bot);
 		}
