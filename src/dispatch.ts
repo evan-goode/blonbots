@@ -9,7 +9,8 @@ import { parseArgsStringToArgv } from "string-argv";
 import * as util from "./util";
 import { Bot, Blonbot, BotConfig } from "./blonbot";
 import { MineflayerBot } from "./mineflayer";
-import { XPManager, levelDifference, XP_PER_BOT } from "./xp";
+import XpManager from "./xp/XpManager";
+import { levelDifference } from "./xp/util";
 import { performance } from "perf_hooks";
 
 export interface DispatchConfig extends BotConfig {
@@ -17,34 +18,383 @@ export interface DispatchConfig extends BotConfig {
 	commandPrefix: string;
 }
 
-const armorSets = [
+const allXpUnits = [
 	{
-		relativeContainerLocation: new Vec3(0, -2, 1),
-		relativeChuteLocation: new Vec3(1, 0, 1),
-		slots: [0, 1, 2, 3],
-	},
-	{
-		relativeContainerLocation: new Vec3(0, -2, -1),
-		relativeChuteLocation: new Vec3(1, 0, -1),
-		slots: [0, 1, 2, 3],
-	},
-	{
-		relativeContainerLocation: new Vec3(1, -2, 0),
-		relativeChuteLocation: new Vec3(-1, 0, 1),
-		slots: [0, 1, 2, 3],
-	},
-	{
-		relativeContainerLocation: new Vec3(-1, -2, 0),
-		relativeChuteLocation: new Vec3(-1, 0, -1),
-		slots: [0, 1, 2, 3],
+		generators: [
+			{
+				relativeContainerLocation: new Vec3(5, -2, -5),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(5, -2, -3),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(3, -2, -5),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(3, -2, -3),
+				containerSlots: [0, 1, 2, 3],
+			},
+		],
+		condenser: {
+			username: "condenser0",
+			targetAmount: 196,
+		},
+	}, {
+		generators: [
+			{
+				relativeContainerLocation: new Vec3(5, -2, -1),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(5, -2, 1),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(3, -2, -1),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(3, -2, 1),
+				containerSlots: [0, 1, 2, 3],
+			},
+		],
+		condenser: {
+			username: "condenser1",
+			targetAmount: 196,
+		},
+	}, {
+		generators: [
+			{
+				relativeContainerLocation: new Vec3(5, -2, 3),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(5, -2, 5),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(3, -2, 3),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(3, -2, 5),
+				containerSlots: [0, 1, 2, 3],
+			},
+		],
+		condenser: {
+			username: "condenser2",
+			targetAmount: 196,
+		},
+	}, {
+		generators: [
+			{
+				relativeContainerLocation: new Vec3(1, -2, -5),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(1, -2, -3),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(-1, -2, -5),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(-1, -2, -3),
+				containerSlots: [0, 1, 2, 3],
+			},
+		],
+		condenser: {
+			username: "condenser3",
+			targetAmount: 196,
+		},
+	}, {
+		generators: [
+			{
+				relativeContainerLocation: new Vec3(1, -2, -1),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(1, -2, 1),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(-1, -2, -1),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(-1, -2, 1),
+				containerSlots: [0, 1, 2, 3],
+			},
+		],
+		condenser: {
+			username: "condenser4",
+			targetAmount: 196,
+		},
+	}, {
+		generators: [
+			{
+				relativeContainerLocation: new Vec3(1, -2, 3),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(1, -2, 5),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(-1, -2, 3),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(-1, -2, 5),
+				containerSlots: [0, 1, 2, 3],
+			},
+		],
+		condenser: {
+			username: "condenser5",
+			targetAmount: 196,
+		},
+	}, {
+		generators: [
+			{
+				relativeContainerLocation: new Vec3(-3, -2, -5),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(-3, -2, -3),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(-5, -2, -5),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(-5, -2, -3),
+				containerSlots: [0, 1, 2, 3],
+			},
+		],
+		condenser: {
+			username: "condenser6",
+			targetAmount: 196,
+		},
+	}, {
+		generators: [
+			{
+				relativeContainerLocation: new Vec3(-3, -2, -1),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(-3, -2, 1),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(-5, -2, -1),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(-5, -2, 1),
+				containerSlots: [0, 1, 2, 3],
+			},
+		],
+		condenser: {
+			username: "condenser7",
+			targetAmount: 196,
+		},
+	}, {
+		generators: [
+			{
+				relativeContainerLocation: new Vec3(-3, -2, 3),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(-3, -2, 5),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(-5, -2, 3),
+				containerSlots: [0, 1, 2, 3],
+			}, {
+				relativeContainerLocation: new Vec3(-5, -2, 5),
+				containerSlots: [0, 1, 2, 3],
+			},
+		],
+		condenser: {
+			username: "condenser8",
+			targetAmount: 196,
+		},
 	},
 ];
+
+// let xpUnits = allXpUnits.slice(0, 4);
+let xpUnits = allXpUnits;
+
+
+// const xpUnits = [
+// 	{
+// 		// generators: [
+// 		// 	{
+// 		// 		relativeContainerLocation: new Vec3(5, -2, -5),
+// 		// 		containerSlots: [0, 1, 2, 3],
+// 		// 	}, {
+// 		// 		relativeContainerLocation: new Vec3(5, -2, -3),
+// 		// 		containerSlots: [0, 1, 2, 3],
+// 		// 	}, {
+// 		// 		relativeContainerLocation: new Vec3(3, -2, -5),
+// 		// 		containerSlots: [0, 1, 2, 3],
+// 		// 	}, {
+// 		// 		relativeContainerLocation: new Vec3(3, -2, -3),
+// 		// 		containerSlots: [0, 1, 2, 3],
+// 		// 	},
+// 		// ],
+// 		// condenser: {
+// 		// 	username: "condenser0",
+// 		// 	targetAmount: 196,
+// 		// },
+// 	// }, {
+// 		generators: [
+// 			{
+// 				relativeContainerLocation: new Vec3(5, -2, -1),
+// 				containerSlots: [0, 1, 2, 3],
+// 			}, {
+// 				relativeContainerLocation: new Vec3(5, -2, 1),
+// 				containerSlots: [0, 1, 2, 3],
+// 			}, {
+// 				relativeContainerLocation: new Vec3(3, -2, -1),
+// 				containerSlots: [0, 1, 2, 3],
+// 			}, {
+// 				relativeContainerLocation: new Vec3(3, -2, 1),
+// 				containerSlots: [0, 1, 2, 3],
+// 			},
+// 		],
+// 		condenser: {
+// 			username: "condenser1",
+// 			targetAmount: 196,
+// 		},
+// 	// }, {
+// 	// 	generators: [
+// 	// 		{
+// 	// 			relativeContainerLocation: new Vec3(5, -2, 3),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(5, -2, 5),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(3, -2, 3),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(3, -2, 5),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		},
+// 	// 	],
+// 	// 	condenser: {
+// 	// 		username: "condenser2",
+// 	// 		targetAmount: 196,
+// 	// 	},
+// 	// }, {
+// 	// 	generators: [
+// 	// 		{
+// 	// 			relativeContainerLocation: new Vec3(1, -2, -5),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(1, -2, -3),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(-1, -2, -5),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(-1, -2, -3),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		},
+// 	// 	],
+// 	// 	condenser: {
+// 	// 		username: "condenser3",
+// 	// 		targetAmount: 196,
+// 	// 	},
+// 	// }, {
+// 	// 	generators: [
+// 	// 		{
+// 	// 			relativeContainerLocation: new Vec3(1, -2, -1),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(1, -2, 1),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(-1, -2, -1),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(-1, -2, 1),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		},
+// 	// 	],
+// 	// 	condenser: {
+// 	// 		username: "condenser4",
+// 	// 		targetAmount: 196,
+// 	// 	},
+// 	// }, {
+// 	// 	generators: [
+// 	// 		{
+// 	// 			relativeContainerLocation: new Vec3(1, -2, 3),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(1, -2, 5),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(-1, -2, 3),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(-1, -2, 5),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		},
+// 	// 	],
+// 	// 	condenser: {
+// 	// 		username: "condenser5",
+// 	// 		targetAmount: 196,
+// 	// 	},
+// 	// }, {
+// 	// 	generators: [
+// 	// 		{
+// 	// 			relativeContainerLocation: new Vec3(-3, -2, -5),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(-3, -2, -3),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(-5, -2, -5),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(-5, -2, -3),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		},
+// 	// 	],
+// 	// 	condenser: {
+// 	// 		username: "condenser6",
+// 	// 		targetAmount: 196,
+// 	// 	},
+// 	// }, {
+// 	// 	generators: [
+// 	// 		{
+// 	// 			relativeContainerLocation: new Vec3(-3, -2, -1),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(-3, -2, 1),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(-5, -2, -1),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(-5, -2, 1),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		},
+// 	// 	],
+// 	// 	condenser: {
+// 	// 		username: "condenser7",
+// 	// 		targetAmount: 196,
+// 	// 	},
+// 	// }, {
+// 	// 	generators: [
+// 	// 		{
+// 	// 			relativeContainerLocation: new Vec3(-3, -2, 3),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(-3, -2, 5),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(-5, -2, 3),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		}, {
+// 	// 			relativeContainerLocation: new Vec3(-5, -2, 5),
+// 	// 			containerSlots: [0, 1, 2, 3],
+// 	// 		},
+// 	// 	],
+// 	// 	condenser: {
+// 	// 		username: "condenser8",
+// 	// 		targetAmount: 196,
+// 	// 	},
+// 	},
+// ];
 
 export class Dispatch extends Blonbot {
 	commandPrefix: string;
 	bots: Map<string, Bot>;
 	db: sqlite.Database;
-	xpManager: XPManager;
+	xpManager: XpManager;
 	constructor(config: DispatchConfig) {
 		const { host, port, username } = config;
 		super({ host, port, username });
@@ -52,7 +402,7 @@ export class Dispatch extends Blonbot {
 		this.commandPrefix = config.commandPrefix;
 		this.client.on("chat", this.onChat.bind(this));
 		this.bots = new Map();
-		this.xpManager = new XPManager(this.host, this.port, armorSets);
+		this.xpManager = new XpManager(this.host, this.port, xpUnits);
 	}
 	static async openDb(path: string): Promise<sqlite.Database> {
 		const db = await open({
@@ -133,10 +483,10 @@ export class Dispatch extends Blonbot {
 		const [command, ...args] = argv;
 		if (command === "summon") {
 			let username;
-			let behaviorArgs: string[];
+			let behaviorArgs;
 			if (args.length === 1) {
 				[username] = args;
-				behaviorArgs = [];
+				behaviorArgs = null;
 			} else if (args.length >= 2) {
 				[username, ...behaviorArgs] = args;
 			} else {
@@ -384,12 +734,12 @@ export class Dispatch extends Blonbot {
 		reply(`Removed teleport "${destinationName}".`);
 	}
 	async startXp(amount: number, reply: (message: string) => void) {
-		const botCount = Math.ceil(amount / XP_PER_BOT);
+		// const botCount = Math.ceil(amount / XP_PER_BOT);
 		if (this.xpManager.started) {
 			reply(`Already generating XP!`);
 			return;
 		}
-		reply(`Summoning ${botCount} XP bot(s) to generate ${amount} XP.`);
+		// reply(`Summoning ${botCount} XP bot(s) to generate ${amount} XP.`);
 		const startTime = performance.now() / 1000;
 		await this.xpManager.start(amount);
 		const endTime = performance.now() / 1000;

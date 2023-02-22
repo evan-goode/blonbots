@@ -1,6 +1,8 @@
 import { Client } from "minecraft-protocol";
 import mineflayer from "mineflayer";
+import { Item } from "prismarine-item";
 import { Block } from "prismarine-block";
+import minecraftData from "minecraft-data";
 import { Vec3 } from "vec3";
 import { performance } from "perf_hooks";
 import JZZ from "jzz";
@@ -42,11 +44,16 @@ export class MineflayerBot extends Bot {
 
 		this.dig = this.dig.bind(this);
 		this.midi = this.midi.bind(this);
+		this.dupe = this.dupe.bind(this);
+		this.surf = this.surf.bind(this);
 
 		this.username = config.username;
 		this.host = config.host;
 		this.port = config.port;
-		this.bot = mineflayer.createBot(config);
+		this.bot = mineflayer.createBot({
+			...config,
+			loadInternalPlugins: true,
+		});
 		this.startTime = performance.now();
 
 		this.client = this.bot._client;
@@ -61,14 +68,21 @@ export class MineflayerBot extends Bot {
 		]).then(() => {});
 
 		this.client.on("position", ({ x, y, z }) => {
+			console.log("pos", { x, y, z});
 			this.position = new Vec3(x, y, z);
 		});
 
 		this.connected = true;
 		this.persist = false;
 
+		this.behaviors.surf = this.surf;
 		this.behaviors.dig = this.dig;
+		this.behaviors.dupe = this.dupe;
 		this.behaviors.midi = this.midi;
+
+		this.client.on("position", ({ x, y, z }) => {
+			this.position = new Vec3(x, y, z);
+		});
 	}
 	disconnect(reason?: string) {
 		this.bot.quit(reason);
@@ -287,4 +301,106 @@ export class MineflayerBot extends Bot {
 			}
 		}
 	}
+	async *dupe(): AsyncIterator<void> {
+		await util.sleep(2);
+		// const hugeString = _.repeat("ࠀ", 21845);
+		// const pages = [
+		// 	hugeString,
+		// 	..._.times(39, () => _.repeat("a", 256)),
+		// ];
+
+
+		const mcData = minecraftData(this.bot.version);
+
+		await this.bot.toss(mcData.itemsByName.red_bed.id, null, null);
+		await util.sleep(1);
+
+
+		const buffer = await fs.promises.readFile("./dupe.bin", "binary");
+		console.log({buffer});
+		this.client.writeRaw(buffer);
+
+		// console.log("dupin, pages are ", {pages});
+
+		// try {
+		// 	this.client.write("edit_book", {
+		// 		new_book: {
+		// 			present: true,
+		// 			itemId: 825,
+		// 			itemCount: 1,
+		// 			nbtData: {
+		// 				type: "compound",
+		// 				name: "",
+		// 				value: {
+		// 					pages: {
+		// 						type: "list",
+		// 						value: { type: "string", value: pages },
+		// 					},
+		// 					title: { type: "string", value: "a" },
+		// 				},
+		// 			}
+		// 		},
+		// 		signing: true,
+		// 		hand: 0,
+		// 	});
+		// 	console.log("wrote");
+		// } catch (e) {
+		// 	console.error(e);
+		// }
+	}
+	async *surf(x: string, y: string, z: string) {
+		await this.ready;
+
+		const start = performance.now();
+
+		// const mcData = minecraftData(this.bot.version);
+
+		const goal = new Vec3(+x, +y, +z);
+
+		let timeout: number;
+
+		const surf = (position: Vec3) => {
+			if (!this.bot.entities) return;
+			const entities = this.bot.entities;
+			const vehicles = Object.values(entities).filter((entity) => {
+				if (entity.kind !== "Vehicles") return false;
+				if (position.distanceTo(entity.position) > 6) return false;
+				return entity.position.distanceTo(goal) < position.distanceTo(goal);
+			});
+
+			if (!vehicles) return;
+
+			const bestVehicle = _.minBy(vehicles, vehicle => vehicle.position.distanceTo(goal));
+			if (!bestVehicle) return;
+
+			const bestVehicles = _.sortBy(vehicles, vehicle => vehicle.position.distanceTo(goal));
+
+
+			const bestVehicleCoords = bestVehicle.position;
+			// console.log({bestVehicleCoords}, "next best", bestVehicles[1] && bestVehicles[1].position, "bot pos", this.bot.entity.position, "nmp pos", this.position);
+
+			const vehicle = (this.bot as any).vehicle;
+			if (bestVehicle === vehicle) return;
+			console.log("mounting");
+			this.bot.mount(bestVehicle);
+		};
+		// interval = setInterval(surf, 1000 / util.TPS);
+
+		let previousPosition = this.position;
+		while (true) {
+			if (this.position) {
+				if (this.position === previousPosition) {
+					this.bot.dismount();
+				}
+				surf(this.position);
+			}
+			console.log("elapsed", performance.now() - start, "pos", this.position);
+			previousPosition = this.position;
+			try {
+				// const {x, y, z}  / util.TPS= await util.timeout(this.recv("position"), 1 / util.TPS);
+				await util.timeout(this.recv("position"), 1 / util.TPS);
+				// await util.timeout(this.recv("attach_entity"), 1 / util.TPS);
+			} catch {}
+		}
+	};
 }

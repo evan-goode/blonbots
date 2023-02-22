@@ -7,10 +7,11 @@ export const sleep = function sleep(seconds: number): Promise<void> {
 	return new Promise((r) => setTimeout(r, 1000 * seconds));
 };
 
-export const timeout = function timeout(ms: number) {
-	return new Promise((resolve, reject) =>
+export const timeout = function timeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+	return new Promise((resolve, reject) => {
+		promise.then(resolve);
 		sleep(ms).then(() => reject(new TimeoutError()))
-	);
+	});
 };
 
 export const isPending = function isPending(p: Promise<any>) {

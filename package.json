@@ -11,6 +11,7 @@
     "lodash": "^4.17.20",
     "minecraft-protocol": "^1.22.0",
     "mineflayer": "^2.37.1",
+    "p-event": "^4.2.0",
     "sanitize-filename": "^1.6.3",
     "sqlite": "^4.0.18",
     "sqlite3": "^5.0.0",

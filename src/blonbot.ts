@@ -2,6 +2,8 @@ import mc, { Client } from "minecraft-protocol";
 import { Vec3 } from "vec3";
 import Emittery from "emittery";
 import { performance } from "perf_hooks";
+import pEvent from "p-event";
+import _ from "lodash";
 
 import * as util from "./util";
 
@@ -36,9 +38,7 @@ export abstract class Bot {
 		this.position = null;
 	}
 	recv(packetName: string): any {
-		return new Promise((r) => {
-			this.client.once(packetName, r);
-		});
+		return pEvent(this.client, packetName)
 	}
 	chat(message: string): void {
 		this.client.write("chat", { message });
@@ -92,7 +92,7 @@ export abstract class Bot {
 			this.chat(`/tell ${username} ${message}`);
 
 		const dist = position.distanceTo(location);
-		const reach = 5; // not sure what this should be. probably a different between Notchian clients and what the server actually checks.
+		const reach = 6;
 		if (dist > reach) {
 			reply(
 				`Warning: I am ${dist.toFixed(
@@ -154,8 +154,8 @@ export class Blonbot extends Bot {
 		this.behaviors = {};
 		// TODO tweak viewDistance for best perf
 		// this.client.write("settings", {
-		// 	locale: "en_us",
-		// 	viewDistance: 2,
+		// 	locale: "en_US",
+		// 	viewDistance: 4,
 		// 	chatFlags: 0,
 		// 	chatColors: true,
 		// 	skinParts: 127,
@@ -168,8 +168,31 @@ export class Blonbot extends Bot {
 		});
 	}
 
+	positionLook(position: Vec3, onGround: boolean) {
+		this.position = position;
+		this.client.write("position_look", {
+			x: position.x,
+			y: position.y,
+			z: position.z,
+			yaw: 0,
+			pitch: 0,
+			onGround,
+			time: 0,
+		});
+	}
 	disconnect(reason?: string) {
 		this.client.end(reason || "");
 		this.connected = false;
+	}
+	activateBlock(location: Vec3): void {
+		this.client.write("block_place", {
+			location,
+			direction: 1,
+			hand: 0,
+			cursorX: 0.5,
+			cursorY: 0.5,
+			cursorZ: 0.5,
+			insideBlock: false,
+		});
 	}
 }
