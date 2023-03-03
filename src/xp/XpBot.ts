@@ -6,7 +6,7 @@ import * as xpUtil from "./util";
 import * as util from "../util";
 import { performance } from "perf_hooks";
 
-export const ADVANCEMENT_XP = 100; // Cover Me in Debris gives 100 XP
+export const ADVANCEMENT_XP = 200; // Cover Me in Debris gives 100 XP; Serious Dedication gives another 100
 
 const GENERATOR_TIMEOUT = 10; // seconds
 const CHUTE_SPEED = 20; // m/s
@@ -16,7 +16,7 @@ const G = 0; // m/s/s
 const INITIAL_VELOCITY = -20; // m/s
 const TERMINAL_VELOCITY = -90.0; // m/s
 const FALL_DISTANCE = 24; // meters
-const INVENTORY_START_SLOT = 59;
+const INVENTORY_START_SLOT = 58;
 
 export interface GeneratorConfig {
 	relativeContainerLocation: Vec3;
@@ -224,7 +224,7 @@ export class XpGenerator extends XpBot {
 		this.activateBlock(containerLocation);
 		// const replaceWindowId = 2;
 		const { windowId: replaceWindowId } = await this.recv("open_window");
-		const replaceActions = _.range(4).map((offset) => {
+		const replaceActions = _.range(this.containerSlots.length).map((offset) => {
 			const action = this.actionCounter++;
 			const slot = INVENTORY_START_SLOT + offset;
 			this.client.write("window_click", {

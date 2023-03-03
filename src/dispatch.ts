@@ -18,194 +18,71 @@ export interface DispatchConfig extends BotConfig {
 	commandPrefix: string;
 }
 
+const containerSlots = [0, 1, 2, 3, 4];
 const allXpUnits = [
 	{
 		generators: [
 			{
-				relativeContainerLocation: new Vec3(5, -2, -5),
-				containerSlots: [0, 1, 2, 3],
-			}, {
-				relativeContainerLocation: new Vec3(5, -2, -3),
-				containerSlots: [0, 1, 2, 3],
-			}, {
-				relativeContainerLocation: new Vec3(3, -2, -5),
-				containerSlots: [0, 1, 2, 3],
-			}, {
-				relativeContainerLocation: new Vec3(3, -2, -3),
-				containerSlots: [0, 1, 2, 3],
-			},
-		],
-		condenser: {
-			username: "condenser0",
-			targetAmount: 196,
-		},
-	}, {
-		generators: [
-			{
-				relativeContainerLocation: new Vec3(5, -2, -1),
-				containerSlots: [0, 1, 2, 3],
-			}, {
-				relativeContainerLocation: new Vec3(5, -2, 1),
-				containerSlots: [0, 1, 2, 3],
-			}, {
-				relativeContainerLocation: new Vec3(3, -2, -1),
-				containerSlots: [0, 1, 2, 3],
-			}, {
-				relativeContainerLocation: new Vec3(3, -2, 1),
-				containerSlots: [0, 1, 2, 3],
-			},
-		],
-		condenser: {
-			username: "condenser1",
-			targetAmount: 196,
-		},
-	}, {
-		generators: [
-			{
-				relativeContainerLocation: new Vec3(5, -2, 3),
-				containerSlots: [0, 1, 2, 3],
-			}, {
-				relativeContainerLocation: new Vec3(5, -2, 5),
-				containerSlots: [0, 1, 2, 3],
-			}, {
-				relativeContainerLocation: new Vec3(3, -2, 3),
-				containerSlots: [0, 1, 2, 3],
-			}, {
-				relativeContainerLocation: new Vec3(3, -2, 5),
-				containerSlots: [0, 1, 2, 3],
-			},
-		],
-		condenser: {
-			username: "condenser2",
-			targetAmount: 196,
-		},
-	}, {
-		generators: [
-			{
-				relativeContainerLocation: new Vec3(1, -2, -5),
-				containerSlots: [0, 1, 2, 3],
-			}, {
-				relativeContainerLocation: new Vec3(1, -2, -3),
-				containerSlots: [0, 1, 2, 3],
-			}, {
-				relativeContainerLocation: new Vec3(-1, -2, -5),
-				containerSlots: [0, 1, 2, 3],
-			}, {
-				relativeContainerLocation: new Vec3(-1, -2, -3),
-				containerSlots: [0, 1, 2, 3],
-			},
-		],
-		condenser: {
-			username: "condenser3",
-			targetAmount: 196,
-		},
-	}, {
-		generators: [
-			{
-				relativeContainerLocation: new Vec3(1, -2, -1),
-				containerSlots: [0, 1, 2, 3],
-			}, {
-				relativeContainerLocation: new Vec3(1, -2, 1),
-				containerSlots: [0, 1, 2, 3],
-			}, {
-				relativeContainerLocation: new Vec3(-1, -2, -1),
-				containerSlots: [0, 1, 2, 3],
-			}, {
-				relativeContainerLocation: new Vec3(-1, -2, 1),
-				containerSlots: [0, 1, 2, 3],
-			},
-		],
-		condenser: {
-			username: "condenser4",
-			targetAmount: 196,
-		},
-	}, {
-		generators: [
-			{
-				relativeContainerLocation: new Vec3(1, -2, 3),
-				containerSlots: [0, 1, 2, 3],
-			}, {
-				relativeContainerLocation: new Vec3(1, -2, 5),
-				containerSlots: [0, 1, 2, 3],
+				relativeContainerLocation: new Vec3(-3, -2, 3),
+				containerSlots,
 			}, {
 				relativeContainerLocation: new Vec3(-1, -2, 3),
-				containerSlots: [0, 1, 2, 3],
+				containerSlots,
 			}, {
-				relativeContainerLocation: new Vec3(-1, -2, 5),
-				containerSlots: [0, 1, 2, 3],
+				relativeContainerLocation: new Vec3(1, -2, 3),
+				containerSlots,
+			}, {
+				relativeContainerLocation: new Vec3(3, -2, 3),
+				containerSlots,
 			},
-		],
-		condenser: {
-			username: "condenser5",
-			targetAmount: 196,
-		},
-	}, {
-		generators: [
 			{
-				relativeContainerLocation: new Vec3(-3, -2, -5),
-				containerSlots: [0, 1, 2, 3],
+				relativeContainerLocation: new Vec3(-3, -2, 1),
+				containerSlots,
 			}, {
-				relativeContainerLocation: new Vec3(-3, -2, -3),
-				containerSlots: [0, 1, 2, 3],
+				relativeContainerLocation: new Vec3(-1, -2, 1),
+				containerSlots,
 			}, {
-				relativeContainerLocation: new Vec3(-5, -2, -5),
-				containerSlots: [0, 1, 2, 3],
+				relativeContainerLocation: new Vec3(1, -2, 1),
+				containerSlots,
 			}, {
-				relativeContainerLocation: new Vec3(-5, -2, -3),
-				containerSlots: [0, 1, 2, 3],
+				relativeContainerLocation: new Vec3(3, -2, 1),
+				containerSlots,
 			},
-		],
-		condenser: {
-			username: "condenser6",
-			targetAmount: 196,
-		},
-	}, {
-		generators: [
 			{
 				relativeContainerLocation: new Vec3(-3, -2, -1),
-				containerSlots: [0, 1, 2, 3],
+				containerSlots,
 			}, {
-				relativeContainerLocation: new Vec3(-3, -2, 1),
-				containerSlots: [0, 1, 2, 3],
+				relativeContainerLocation: new Vec3(-1, -2, -1),
+				containerSlots,
 			}, {
-				relativeContainerLocation: new Vec3(-5, -2, -1),
-				containerSlots: [0, 1, 2, 3],
+				relativeContainerLocation: new Vec3(1, -2, -1),
+				containerSlots,
 			}, {
-				relativeContainerLocation: new Vec3(-5, -2, 1),
-				containerSlots: [0, 1, 2, 3],
+				relativeContainerLocation: new Vec3(3, -2, -1),
+				containerSlots,
 			},
-		],
-		condenser: {
-			username: "condenser7",
-			targetAmount: 196,
-		},
-	}, {
-		generators: [
 			{
-				relativeContainerLocation: new Vec3(-3, -2, 3),
-				containerSlots: [0, 1, 2, 3],
+				relativeContainerLocation: new Vec3(-3, -2, -3),
+				containerSlots,
 			}, {
-				relativeContainerLocation: new Vec3(-3, -2, 5),
-				containerSlots: [0, 1, 2, 3],
+				relativeContainerLocation: new Vec3(-1, -2, -3),
+				containerSlots,
 			}, {
-				relativeContainerLocation: new Vec3(-5, -2, 3),
-				containerSlots: [0, 1, 2, 3],
+				relativeContainerLocation: new Vec3(1, -2, -3),
+				containerSlots,
 			}, {
-				relativeContainerLocation: new Vec3(-5, -2, 5),
-				containerSlots: [0, 1, 2, 3],
+				relativeContainerLocation: new Vec3(3, -2, -3),
+				containerSlots,
 			},
 		],
-		condenser: {
-			username: "condenser8",
-			targetAmount: 196,
-		},
+		condenser: null,
 	},
 ];
 
 // let xpUnits = allXpUnits.slice(0, 4);
 let xpUnits = allXpUnits;
 
-
+// Old smaller setup
 // const xpUnits = [
 // 	{
 // 		// generators: [

@@ -9,7 +9,7 @@
     "jzz": "^1.1.7",
     "jzz-midi-smf": "^1.4.2",
     "lodash": "^4.17.20",
-    "minecraft-protocol": "^1.22.0",
+    "minecraft-protocol": "^1.41.0",
     "mineflayer": "^2.37.1",
     "p-event": "^4.2.0",
     "sanitize-filename": "^1.6.3",

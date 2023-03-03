@@ -1,3 +1,4 @@
+/// NO LONGER USED?!?!
 import { Vec3 } from "vec3";
 import _ from "lodash";
 import { v1 as uuidv1 } from "uuid";
@@ -7,7 +8,7 @@ import * as util from "./util";
 import { Blonbot, BotConfig } from "./blonbot";
 
 const ORB_INGEST_RATE = 10; // player can ingest 1 orb every 2 gt
-const ADVANCEMENT_XP = 100; // Cover Me in Debris gives 100 XP
+const ADVANCEMENT_XP = 200; // Cover Me in Debris gives 100 XP, Serious Dedication gives another 100
 const MAX_DROPPED_XP = 100;
 
 const levelToExperience = function levelToExperience(level: number) {
@@ -85,7 +86,7 @@ const INITIAL_VELOCITY = -1; // m/s
 const TERMINAL_VELOCITY = -40.0; // m/s
 const FALL_DISTANCE = 24; // meters
 
-const INVENTORY_START_SLOT = 59;
+const INVENTORY_START_SLOT = 58;
 
 interface GeneratorConfig {
 	relativeContainerLocation: Vec3;
@@ -200,18 +201,18 @@ class XpGenerator extends XpBot {
 		this.activateBlock(containerLocation);
 		const retrieveWindowId = 1;
 		// const { windowId: retrieveWindowId } = await this.recv("open_window");
-		const retrieveActions = this.containerSlots.map((slot, index) => {
-			const action = this.actionCounter++;
-			this.client.write("window_click", {
-				windowId: retrieveWindowId,
-				slot,
-				mouseButton: 0,
-				action,
-				mode: 1,
-				item: { present: false },
-			});
-			return action;
-		});
+		// const retrieveActions = this.containerSlots.map((slot, index) => {
+		// 	const action = this.actionCounter++;
+		// 	this.client.write("window_click", {
+		// 		windowId: retrieveWindowId,
+		// 		slot,
+		// 		mouseButton: 0,
+		// 		action,
+		// 		mode: 1,
+		// 		item: { present: false },
+		// 	});
+		// 	return action;
+		// });
 		this.client.write("close_window", { retrieveWindowId });
 
 		// wait for XP
@@ -224,18 +225,19 @@ class XpGenerator extends XpBot {
 		this.activateBlock(containerLocation);
 		const replaceWindowId = 2;
 		// const { windowId: replaceWindowId } = await this.recv("open_window");
-		const replaceActions = _.range(4).map((offset) => {
-			const action = this.actionCounter++;
-			const slot = INVENTORY_START_SLOT + offset;
-			this.client.write("window_click", {
-				windowId: replaceWindowId,
-				slot,
-				mouseButton: 0,
-				action,
-				mode: 1,
-				item: { present: false },
-			});
-		});
+		// const replaceActions = [].map((slot) => {
+		// 	const action = this.actionCounter++;
+		// 	// const slot = slot;
+		// 	console.log("clicked", slot);
+		// 	this.client.write("window_click", {
+		// 		windowId: replaceWindowId,
+		// 		slot,
+		// 		mouseButton: 0,
+		// 		action,
+		// 		mode: 1,
+		// 		item: { present: false },
+		// 	});
+		// });
 
 		// move to the chute
 		const chuteLocation = new Vec3(
