@@ -151,7 +151,7 @@ export class XpGenerator extends XpBot {
 	async generate(): Promise<void> {
 		if (!this.position) {
 			const { x, y, z } = await this.recv("position");
-			this.position = new Vec3(x, y, z);
+			this.position = new Vec3(x, y + 0.0625, z);
 		}
 
 		const initialPosition = this.position.clone();
@@ -212,6 +212,7 @@ export class XpGenerator extends XpBot {
 			});
 			return action;
 		});
+		console.log("done!");
 		this.client.write("close_window", { retrieveWindowId });
 
 		// wait for XP

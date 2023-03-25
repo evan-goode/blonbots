@@ -174,7 +174,7 @@ export class MineflayerBot extends Bot {
 			}
 			section.map((noteBlock: Block, targetNote: number) => {
 				// @ts-ignore
-				let { note } = noteBlock.getProperties();
+				let note = noteBlock.getProperties().note as number;
 				while (note !== targetNote) {
 					this.bot.activateBlock(noteBlock);
 					note = (note + 1) % rangeSize;
@@ -297,6 +297,7 @@ export class MineflayerBot extends Bot {
 				player.loop(true);
 			} catch (e) {
 				console.error({ e });
+				// @ts-ignore
 				this.chat(e.message);
 			}
 		}

@@ -278,6 +278,7 @@ export class Dispatch extends Blonbot {
 		this.db = config.db;
 		this.commandPrefix = config.commandPrefix;
 		this.client.on("chat", this.onChat.bind(this));
+		this.client.on("playerChat", this.onChat.bind(this));
 		this.bots = new Map();
 		this.xpManager = new XpManager(this.host, this.port, xpUnits);
 	}
@@ -300,6 +301,7 @@ export class Dispatch extends Blonbot {
 		return db;
 	}
 	async onChat(packet: any): Promise<void> {
+		console.log("got packet", packet);
 		const parsed = JSON.parse(packet.message);
 		const validTranslates = [
 			"commands.message.display.incoming",

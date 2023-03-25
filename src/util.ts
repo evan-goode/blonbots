@@ -1,7 +1,7 @@
 export class TimeoutError extends Error {}
 
 export const TPS = 20;
-export const HIDE_MESSAGE = "🚫";
+export const HIDE_MESSAGE = "!";
 
 export const sleep = function sleep(seconds: number): Promise<void> {
 	return new Promise((r) => setTimeout(r, 1000 * seconds));

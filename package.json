@@ -10,7 +10,7 @@
     "jzz-midi-smf": "^1.4.2",
     "lodash": "^4.17.20",
     "minecraft-protocol": "^1.41.0",
-    "mineflayer": "^2.37.1",
+    "mineflayer": "^4.8.1",
     "p-event": "^4.2.0",
     "sanitize-filename": "^1.6.3",
     "sqlite": "^4.0.18",
@@ -24,5 +24,8 @@
   "name": "blonbots",
   "version": "1.0.0",
   "main": "index.js",
-  "license": "AGPL-3.0-or-later"
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+  	"start": "npx tsc && node ./build/index.js"
+  }
 }
