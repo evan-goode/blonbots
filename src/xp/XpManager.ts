@@ -69,7 +69,7 @@ export default class XpManager {
 	recvMessage(worker: Worker, messageType: string) {
 		return pEvent(worker, "message", ({type, data}) => type === messageType);
 	}
-	async start(amount?: number): Promise<void> {
+	async start(amount?: number): Promise<number> {
 		if (this.started) {
 			throw "XP already started!";
 		}
@@ -85,11 +85,11 @@ export default class XpManager {
 
 		// let generators = this.units.flatMap(unit => unit.generators.map(this.newGenerator));
 
+		let xpPerWave = _.sum(this.units.flatMap(getUnitOutput));
+
 		let remainingWaves;
 		if (amount) {
-			remainingWaves = Math.ceil(
-				amount / _.sum(this.units.flatMap(getUnitOutput))
-			);
+			remainingWaves = Math.ceil(amount / xpPerWave);
 		} else {
 			remainingWaves = Infinity;
 		}
@@ -98,11 +98,14 @@ export default class XpManager {
 			this.units.map((unit) => getUnitOutput(unit).length)
 		);
 		const slowestUnitTime = _.min<number>(this.units.map((unit) => getUnitTime(unit))) as number;
-		console.log({ orbsPerWave });
+		console.log({ xpPerWave, orbsPerWave });
 
 		// ideal time per wave to match ORB_INGEST_RATE
 		const desiredTime = Math.max(slowestUnitTime, orbsPerWave / xpUtil.ORB_INGEST_RATE);
 		console.log({ desiredTime });
+
+		const xpPerHour = 3600 * xpPerWave / desiredTime;
+		console.log({xpPerHour});
 
 		const condenserConfigs: CondenserConfig[] = this.units
 			.filter((unit) => unit.condenser !== null)
@@ -159,6 +162,7 @@ export default class XpManager {
 
 		console.log("all are ready");
 
+		let totalGenerated = 0;
 		while (remainingWaves) {
 			startTime = performance.now() / 1000;
 
@@ -210,7 +214,7 @@ export default class XpManager {
 					this.recvMessage(generator, "suicide")
 				)
 			);
-			// console.log("suicide complete");
+			totalGenerated += xpPerWave;
 
 			if (!this.started) break;
 
@@ -248,6 +252,8 @@ export default class XpManager {
 		generators.map((generator) => this.postMessage(generator, "exit"));
 
 		this.started = false;
+
+		return totalGenerated;
 	}
 	stop() {
 		this.started = false;

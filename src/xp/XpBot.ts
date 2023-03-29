@@ -20,7 +20,6 @@ const INVENTORY_START_SLOT = 58;
 
 export interface GeneratorConfig {
 	relativeContainerLocation: Vec3;
-	containerSlots: number[];
 }
 
 export interface CondenserConfig {
@@ -124,13 +123,11 @@ export class XpCondenser extends XpBot {
 
 export class XpGenerator extends XpBot {
 	relativeContainerLocation: Vec3;
-	containerSlots: number[];
 	actionCounter: number;
 	constructor(config: BotConfig, generatorConfig: GeneratorConfig) {
 		super(config);
 		this.actionCounter = 1;
 		this.relativeContainerLocation = generatorConfig.relativeContainerLocation;
-		this.containerSlots = generatorConfig.containerSlots;
 	}
 	async generateOrTimeOut(): Promise<void> {
 		let timeout: NodeJS.Timeout;
@@ -197,46 +194,95 @@ export class XpGenerator extends XpBot {
 			Math.floor(initialPosition.z + this.relativeContainerLocation.z)
 		);
 
-		this.activateBlock(containerLocation);
-		// const retrieveWindowId = 1;
-		const { windowId: retrieveWindowId } = await this.recv("open_window");
-		const retrieveActions = this.containerSlots.map((slot, index) => {
-			const action = this.actionCounter++;
-			this.client.write("window_click", {
-				windowId: retrieveWindowId,
-				slot,
-				mouseButton: 0,
-				action,
-				mode: 1,
-				item: { present: false },
-			});
-			return action;
-		});
-		console.log("done!");
-		this.client.write("close_window", { retrieveWindowId });
+		// Assume
+		const retrieveWindowId = 1;
 
-		// wait for XP
-		let totalExperience = 0;
-		while (totalExperience < ADVANCEMENT_XP) {
-			totalExperience = (await this.recv("experience")).totalExperience;
+		// const { windowId: retrieveWindowId } = await this.recv("open_window");
+
+		const windowItemsPromise = this.recv("window_items", (p: any) => p.windowId == retrieveWindowId);
+		this.activateBlock(containerLocation);
+
+		const { stateId, items: windowItems } = await windowItemsPromise;
+
+		// take everything out of the container
+		let inventorySlot = 62;
+		for (const [slot, item] of windowItems.entries()) {
+			if (!item.present) continue;
+			const p = {
+				slot,
+				stateId,
+				windowId: retrieveWindowId,
+				mouseButton: 0, // left click
+				mode: 1, // shift
+				changedSlots: [{
+					location: slot,
+					item: { present: false },
+				}, {
+					location: inventorySlot--,
+					item,
+				}],
+				cursorItem: { present: false },
+			}
+			this.client.write("window_click", p);
 		}
 
+		// Old packet
+		// this.client.write("window_click", {
+		// 	windowId: retrieveWindowId,
+		// 	slot,
+		// 	mouseButton: 0,
+		// 	action,
+		// 	mode: 1,
+		// 	item: { present: false },
+		// });
+
+		// console.log("done!");
+
+		// wait for XP
+		// let totalExperience = 0;
+		// while (totalExperience < ADVANCEMENT_XP) {
+		// 	totalExperience = (await this.recv("experience")).totalExperience;
+		// }
+		await this.recv("experience", (p: any) => p.totalExperience >= ADVANCEMENT_XP);
+
 		// put the armor back
-		this.activateBlock(containerLocation);
+		// this.activateBlock(containerLocation);
 		// const replaceWindowId = 2;
-		const { windowId: replaceWindowId } = await this.recv("open_window");
-		const replaceActions = _.range(this.containerSlots.length).map((offset) => {
-			const action = this.actionCounter++;
-			const slot = INVENTORY_START_SLOT + offset;
-			this.client.write("window_click", {
-				windowId: replaceWindowId,
-				slot,
-				mouseButton: 0,
-				action,
-				mode: 1,
-				item: { present: false },
-			});
-		});
+		// const { windowId: replaceWindowId } = await this.recv("open_window");
+		// const replaceActions = _.range(this.containerSlots.length).map((offset) => {
+		// 	const action = this.actionCounter++;
+		// 	const slot = INVENTORY_START_SLOT + offset;
+		// 	this.client.write("window_click", {
+		// 		windowId: replaceWindowId,
+		// 		slot,
+		// 		mouseButton: 0,
+		// 		action,
+		// 		mode: 1,
+		// 		item: { present: false },
+		// 	});
+		// });
+
+		inventorySlot = 62;
+		for (const [slot, item] of windowItems.entries()) {
+			if (!item.present) continue;
+			const p = {
+				stateId,
+				slot: inventorySlot,
+				windowId: retrieveWindowId,
+				mouseButton: 0, // left click
+				mode: 1, // shift
+				changedSlots: [{
+					location: inventorySlot--,
+					item: { present: false },
+				}, {
+					location: slot,
+					item,
+				}],
+				cursorItem: { present: false },
+			}
+			this.client.write("window_click", p);
+		}
+		this.client.write("close_window", { retrieveWindowId });
 	}
 }
 

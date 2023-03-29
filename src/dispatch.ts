@@ -18,61 +18,41 @@ export interface DispatchConfig extends BotConfig {
 	commandPrefix: string;
 }
 
-const containerSlots = [0, 1, 2, 3, 4];
 const allXpUnits = [
 	{
 		generators: [
 			{
 				relativeContainerLocation: new Vec3(-3, -2, 3),
-				containerSlots,
 			}, {
 				relativeContainerLocation: new Vec3(-1, -2, 3),
-				containerSlots,
 			}, {
 				relativeContainerLocation: new Vec3(1, -2, 3),
-				containerSlots,
 			}, {
 				relativeContainerLocation: new Vec3(3, -2, 3),
-				containerSlots,
-			},
-			{
+			}, {
 				relativeContainerLocation: new Vec3(-3, -2, 1),
-				containerSlots,
 			}, {
 				relativeContainerLocation: new Vec3(-1, -2, 1),
-				containerSlots,
 			}, {
 				relativeContainerLocation: new Vec3(1, -2, 1),
-				containerSlots,
 			}, {
 				relativeContainerLocation: new Vec3(3, -2, 1),
-				containerSlots,
-			},
-			{
+			}, {
 				relativeContainerLocation: new Vec3(-3, -2, -1),
-				containerSlots,
 			}, {
 				relativeContainerLocation: new Vec3(-1, -2, -1),
-				containerSlots,
 			}, {
 				relativeContainerLocation: new Vec3(1, -2, -1),
-				containerSlots,
 			}, {
 				relativeContainerLocation: new Vec3(3, -2, -1),
-				containerSlots,
-			},
-			{
+			}, {
 				relativeContainerLocation: new Vec3(-3, -2, -3),
-				containerSlots,
 			}, {
 				relativeContainerLocation: new Vec3(-1, -2, -3),
-				containerSlots,
 			}, {
 				relativeContainerLocation: new Vec3(1, -2, -3),
-				containerSlots,
 			}, {
 				relativeContainerLocation: new Vec3(3, -2, -3),
-				containerSlots,
 			},
 		],
 		condenser: null,
@@ -301,8 +281,10 @@ export class Dispatch extends Blonbot {
 		return db;
 	}
 	async onChat(packet: any): Promise<void> {
-		console.log("got packet", packet);
-		const parsed = JSON.parse(packet.message);
+		let parsed;
+		try {
+			parsed = JSON.parse(packet.message);
+		} catch { return; }
 		const validTranslates = [
 			"commands.message.display.incoming",
 			"chat.type.text",
@@ -620,9 +602,9 @@ export class Dispatch extends Blonbot {
 		}
 		// reply(`Summoning ${botCount} XP bot(s) to generate ${amount} XP.`);
 		const startTime = performance.now() / 1000;
-		await this.xpManager.start(amount);
+		const totalGenerated = await this.xpManager.start(amount);
 		const endTime = performance.now() / 1000;
-		reply(`Generated ${amount} xp in ${endTime - startTime} seconds`);
+		reply(`Generated ${totalGenerated} xp in ${endTime - startTime} seconds`);
 	}
 	stopXp(reply: (message: string) => void) {
 		this.xpManager.stop();

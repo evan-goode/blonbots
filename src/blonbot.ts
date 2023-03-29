@@ -37,8 +37,8 @@ export abstract class Bot {
 		this.started = false;
 		this.position = null;
 	}
-	recv(packetName: string): any {
-		return pEvent(this.client, packetName)
+	recv(packetName: string, filter?: any): any {
+		return pEvent(this.client, packetName, filter)
 	}
 	chat(message: string): void {
 		this.client.write("chat", { message });
