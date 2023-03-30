@@ -7,18 +7,17 @@ import pEvent from "p-event";
 
 import {
 	ADVANCEMENT_XP,
-	CondenserConfig,
 	GeneratorConfig,
-	XpCondenser,
 	XpGenerator,
 } from "./XpBot";
 import * as xpUtil from "./util";
 import * as util from "../util";
 import { Blonbot, BotConfig } from "../blonbot";
 
+const GENERATOR_TIMEOUT = 10; // seconds
+
 export interface XpUnit {
 	generators: GeneratorConfig[];
-	condenser: CondenserConfig | null;
 }
 
 const getUnitOutput = (unit: XpUnit) => {
@@ -28,8 +27,7 @@ const getUnitOutput = (unit: XpUnit) => {
 	const generated = _.flatten(
 		_.times(unit.generators.length, _.constant(perGenerator))
 	);
-	if (unit.condenser === null) return generated;
-	return xpUtil.dropXp(xpUtil.experienceToLevel(_.sum(generated)));
+	return generated;
 };
 
 const getUnitTime = (unit: XpUnit): number => {
@@ -41,27 +39,15 @@ const getUnitTime = (unit: XpUnit): number => {
 export default class XpManager {
 	host: string;
 	port: number;
-	units: XpUnit[];
-	started: boolean;
-	constructor(host: string, port: number, units: XpUnit[]) {
+	unit: XpUnit;
+	running: boolean;
+	generators: Worker[];
+	constructor(host: string, port: number, unit: XpUnit) {
 		this.host = host;
 		this.port = port;
-		this.units = units;
-		this.newCondenserWorker = this.newCondenserWorker.bind(this);
-		this.started = false;
-	}
-	newCondenserWorker(condenserConfig: CondenserConfig): Worker {
-		const config = {
-			host: this.host,
-			port: this.port,
-			username: condenserConfig.username,
-		};
-		return new Worker("./build/xp/condenserWorker.js", {
-			workerData: {
-				condenserConfig,
-				botConfig: config,
-			},
-		});
+		this.unit = unit;
+		this.running = false;
+		this.generators = [];
 	}
 	postMessage(worker: Worker, type: string, data: object = {}) {
 		worker.postMessage({ type, data });
@@ -69,104 +55,22 @@ export default class XpManager {
 	recvMessage(worker: Worker, messageType: string) {
 		return pEvent(worker, "message", ({type, data}) => type === messageType);
 	}
-	async start(amount?: number): Promise<number> {
-		if (this.started) {
-			throw "XP already started!";
-		}
-		this.started = true;
-
-		// const generatorConfigs = this.generatorConfigs.slice(
-		// 	0,
-		// 	Math.min(this.generatorConfigs.length, remainingBots)
-		// );
-		// const simultaneousGenerators = generatorConfigs.length;
-
-		let startTime = performance.now() / 1000;
-
-		// let generators = this.units.flatMap(unit => unit.generators.map(this.newGenerator));
-
-		let xpPerWave = _.sum(this.units.flatMap(getUnitOutput));
-
-		let remainingWaves;
-		if (amount) {
-			remainingWaves = Math.ceil(amount / xpPerWave);
-		} else {
-			remainingWaves = Infinity;
-		}
-
-		const orbsPerWave = _.sum(
-			this.units.map((unit) => getUnitOutput(unit).length)
-		);
-		const slowestUnitTime = _.min<number>(this.units.map((unit) => getUnitTime(unit))) as number;
-		console.log({ xpPerWave, orbsPerWave });
-
-		// ideal time per wave to match ORB_INGEST_RATE
-		const desiredTime = Math.max(slowestUnitTime, orbsPerWave / xpUtil.ORB_INGEST_RATE);
-		console.log({ desiredTime });
-
-		const xpPerHour = 3600 * xpPerWave / desiredTime;
-		console.log({xpPerHour});
-
-		const condenserConfigs: CondenserConfig[] = this.units
-			.filter((unit) => unit.condenser !== null)
-			.map((unit) => unit.condenser!);
-		const condensers = condenserConfigs.map((condenserConfig) => {
-			return new Worker("./build/xp/condenserWorker.js");
-		});
-		await Promise.all(
-			condensers.map((condenser) => {
-				return this.recvMessage(condenser, "ready");
-			})
-		);
-
-		const condenserTimes: number[] = [];
-		condensers.map(condenser => {
-			condenser.on("message", ({type, data}) => {
-				if (type !== "time") return;
-				const { time } = data;
-				condenserTimes.push(time);
-				if (condenserTimes.length > condensers.length) {
-					condenserTimes.shift();
-				}
-				// console.log({condenserTimes});
-			});
-		});
-
-		_.zip<any>(condensers, condenserConfigs).map(
-			([condenser, condenserConfig]) => {
-				const botConfig = {
-					host: this.host,
-					port: this.port,
-					username: condenserConfig.username,
-				};
-				this.postMessage(condenser, "reset", {
-					botConfig,
-					condenserConfig,
-				});
-			}
-		);
-		await Promise.all(
-			condensers.map((condenser) => this.recvMessage(condenser, "reset"))
-		);
-		condensers.map((condenser) => this.postMessage(condenser, "condense"));
-
-		const generatorConfigs = this.units.flatMap((unit) => unit.generators);
-		const generators = generatorConfigs.map((generatorConfig) => {
+	async makeGenerators(): Promise<Worker[]> {
+		const generators = this.unit.generators.map((generatorConfig) => {
 			return new Worker("./build/xp/generatorWorker.js");
 		});
 
 		console.log("waiting for ready");
-		await Promise.all(
-			generators.map((generator) => this.recvMessage(generator, "ready"))
-		);
-
+		await Promise.all(generators.map((generator) => this.recvMessage(generator, "ready")));
 		console.log("all are ready");
 
-		let totalGenerated = 0;
-		while (remainingWaves) {
-			startTime = performance.now() / 1000;
+		return generators;
+	}
 
-			_.zip<any>(generators, generatorConfigs).map(
+	async wave(): Promise<void> {
+		const generators = this.generators;
+		const doWave = async (): Promise<void> => {
+			_.zip<any>(generators, this.unit.generators).forEach(
 				([generator, generatorConfig]) => {
 					const botConfig = {
 						host: this.host,
@@ -180,31 +84,17 @@ export default class XpManager {
 						generatorConfig,
 					});
 					this.recvMessage(generator, "reset").then(() => {
-						this.postMessage(generator, "generate");
+						this.postMessage(generator, "generate"); // initiate generate asynchronously
 					});
 				}
 			);
 
-			// console.log("waiting for reset");
-			// await Promise.all(
-			// 	generators.map((generator) =>
-			// 		this.recvMessage(generator, "reset")
-			// 	)
-			// );
-
-			// console.log("all are reset");
-
 			// synchronize waves of generators to minimize chance of interference with adjacent chutes
-
-			// generators.map((generator) =>
-			// 	this.postMessage(generator, "generate")
-			// );
 			await Promise.all(
 				generators.map((generator) =>
 					this.recvMessage(generator, "generate")
 				)
 			);
-			// console.log("ALL generate complete");
 
 			generators.map((generator) =>
 				this.postMessage(generator, "suicide")
@@ -214,19 +104,80 @@ export default class XpManager {
 					this.recvMessage(generator, "suicide")
 				)
 			);
-			totalGenerated += xpPerWave;
 
-			if (!this.started) break;
+			generators.map((generator) => this.postMessage(generator, "disconnect"));
+		}
+
+		const timeoutPromise = async (): Promise<void> => {
+			await util.sleep(GENERATOR_TIMEOUT);
+			throw Error("timed out!")
+		};
+
+		return await Promise.race([doWave(), timeoutPromise()]);
+	}
+	async start(amount?: number): Promise<number> {
+		if (this.running) {
+			throw "XP already running!";
+		}
+		this.running = true;
+
+		let startTime = performance.now() / 1000;
+
+		let xpPerWave = _.sum(getUnitOutput(this.unit));
+
+		let remainingWaves;
+		if (amount) {
+			remainingWaves = Math.ceil(amount / xpPerWave);
+		} else {
+			remainingWaves = Infinity;
+		}
+
+		const orbsPerWave = getUnitOutput(this.unit).length;
+		const unitTime = getUnitTime(this.unit);
+		console.log({ xpPerWave, orbsPerWave });
+
+		// ideal time per wave to match ORB_INGEST_RATE
+		const desiredTime = Math.max(unitTime, orbsPerWave / xpUtil.ORB_INGEST_RATE);
+		console.log({ desiredTime });
+
+		const xpPerHour = 3600 * xpPerWave / desiredTime;
+		console.log({xpPerHour});
+
+		this.generators = await this.makeGenerators();
+
+		let totalGenerated = 0;
+		while (remainingWaves) {
+			startTime = performance.now() / 1000;
+
+			let success = false;
+			try {
+				await this.wave();
+				success = true;
+			} catch (e) {
+				this.generators.map(generator => this.postMessage(generator, "exit"));
+				console.error("XP Error: ", e);
+				// Easiest to just make brand new workers. If we used a proper
+				// worker library, cancellable promises, etc, this could maybe
+				// work, but as-is, old bots would interfere with new bots
+				this.generators = await this.makeGenerators();
+			}
+
+			if (!this.running) break;
+
+			if (!success) {
+				const failDelay = 1;
+				console.error(`Failed, starting next wave in ${failDelay} second(s)`);
+				await util.sleep(failDelay);
+				continue;
+			}
+
+			totalGenerated += xpPerWave;
 
 			const endTime = performance.now() / 1000;
 			const elapsedTime = endTime - startTime;
 
 			// delay waves to perfectly match desiredTime
-			let currentDesiredTime = desiredTime;
-			if (condensers.length && condenserTimes.length === condensers.length) {
-				currentDesiredTime += _.mean(condenserTimes); // condensers can't absorb XP while they're suiciding
-			}
-			let delay = currentDesiredTime - elapsedTime;
+			let delay = desiredTime - elapsedTime;
 			if (delay < 0) {
 				console.log(
 					`Underrun! Not enough armor sets to supply XP at maximum rate.`
@@ -234,28 +185,20 @@ export default class XpManager {
 				delay = 0;
 			}
 
-			console.log({ elapsedTime, desiredTime, currentDesiredTime, delay, remainingWaves });
+			console.log(JSON.stringify({ elapsedTime: elapsedTime.toFixed(2), desiredTime, delay, remainingWaves }).replace("\n", " "));
 
 			remainingWaves -= 1;
-
-			generators.map((generator) => this.postMessage(generator, "disconnect"));
-
-			// await Promise.all(condensers.map((condenser) => {
-			// 	return this.recvMessage(condenser, "time");
-			// }));
 
 			if (remainingWaves) await util.sleep(delay);
 		}
 		
-		// TODO wait for condensers to drop all xp
-		// condensers.map((condenser) => this.postMessage(condenser, "exit"));
-		generators.map((generator) => this.postMessage(generator, "exit"));
+		this.generators.map((generator) => this.postMessage(generator, "exit"));
 
-		this.started = false;
+		this.running = false;
 
 		return totalGenerated;
 	}
 	stop() {
-		this.started = false;
+		this.running = false;
 	}
 }

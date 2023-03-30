@@ -28,7 +28,7 @@ parentPort!.on("message", async ({type, data}: any) => {
 	if (generator === null) return;
 
 	if (type === "generate") {
-		await generator.generateOrTimeOut();
+		await generator.generate();
 		postMessage("generate");
 	} else if (type === "suicide") {
 		await generator.suicide();

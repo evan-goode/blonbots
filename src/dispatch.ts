@@ -18,49 +18,43 @@ export interface DispatchConfig extends BotConfig {
 	commandPrefix: string;
 }
 
-const allXpUnits = [
-	{
-		generators: [
-			{
-				relativeContainerLocation: new Vec3(-3, -2, 3),
-			}, {
-				relativeContainerLocation: new Vec3(-1, -2, 3),
-			}, {
-				relativeContainerLocation: new Vec3(1, -2, 3),
-			}, {
-				relativeContainerLocation: new Vec3(3, -2, 3),
-			}, {
-				relativeContainerLocation: new Vec3(-3, -2, 1),
-			}, {
-				relativeContainerLocation: new Vec3(-1, -2, 1),
-			}, {
-				relativeContainerLocation: new Vec3(1, -2, 1),
-			}, {
-				relativeContainerLocation: new Vec3(3, -2, 1),
-			}, {
-				relativeContainerLocation: new Vec3(-3, -2, -1),
-			}, {
-				relativeContainerLocation: new Vec3(-1, -2, -1),
-			}, {
-				relativeContainerLocation: new Vec3(1, -2, -1),
-			}, {
-				relativeContainerLocation: new Vec3(3, -2, -1),
-			}, {
-				relativeContainerLocation: new Vec3(-3, -2, -3),
-			}, {
-				relativeContainerLocation: new Vec3(-1, -2, -3),
-			}, {
-				relativeContainerLocation: new Vec3(1, -2, -3),
-			}, {
-				relativeContainerLocation: new Vec3(3, -2, -3),
-			},
-		],
-		condenser: null,
-	},
-];
-
-// let xpUnits = allXpUnits.slice(0, 4);
-let xpUnits = allXpUnits;
+const xpUnit = {
+	generators: [
+		{
+			relativeContainerLocation: new Vec3(-3, -2, 3),
+		}, {
+			relativeContainerLocation: new Vec3(-1, -2, 3),
+		}, {
+			relativeContainerLocation: new Vec3(1, -2, 3),
+		}, {
+			relativeContainerLocation: new Vec3(3, -2, 3),
+		}, {
+			relativeContainerLocation: new Vec3(-3, -2, 1),
+		}, {
+			relativeContainerLocation: new Vec3(-1, -2, 1),
+		}, {
+			relativeContainerLocation: new Vec3(1, -2, 1),
+		}, {
+			relativeContainerLocation: new Vec3(3, -2, 1),
+		}, {
+			relativeContainerLocation: new Vec3(-3, -2, -1),
+		}, {
+			relativeContainerLocation: new Vec3(-1, -2, -1),
+		}, {
+			relativeContainerLocation: new Vec3(1, -2, -1),
+		}, {
+			relativeContainerLocation: new Vec3(3, -2, -1),
+		}, {
+			relativeContainerLocation: new Vec3(-3, -2, -3),
+		}, {
+			relativeContainerLocation: new Vec3(-1, -2, -3),
+		}, {
+			relativeContainerLocation: new Vec3(1, -2, -3),
+		}, {
+			relativeContainerLocation: new Vec3(3, -2, -3),
+		},
+	],
+};
 
 // Old smaller setup
 // const xpUnits = [
@@ -260,7 +254,7 @@ export class Dispatch extends Blonbot {
 		this.client.on("chat", this.onChat.bind(this));
 		this.client.on("playerChat", this.onChat.bind(this));
 		this.bots = new Map();
-		this.xpManager = new XpManager(this.host, this.port, xpUnits);
+		this.xpManager = new XpManager(this.host, this.port, xpUnit);
 	}
 	static async openDb(path: string): Promise<sqlite.Database> {
 		const db = await open({
@@ -596,7 +590,7 @@ export class Dispatch extends Blonbot {
 	}
 	async startXp(amount: number, reply: (message: string) => void) {
 		// const botCount = Math.ceil(amount / XP_PER_BOT);
-		if (this.xpManager.started) {
+		if (this.xpManager.running) {
 			reply(`Already generating XP!`);
 			return;
 		}

@@ -1,3 +1,7 @@
+import repl from "repl";
+
+import _ from "lodash";
+
 export const ORB_INGEST_RATE = 10; // player can ingest 1 orb every 2 gt
 export const MAX_DROPPED_XP = 100;
 
@@ -67,3 +71,10 @@ export const levelDifference = function levelDifference(
 	return levelToExperience(endLevel) - levelToExperience(startLevel);
 };
 
+// PLAYGROUND
+
+// const level = experienceToLevel(200);
+// for (const level of [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]) {
+// 	const density = _.sum(dropXp(level)) / dropXp(level).length;
+// 	console.log(level, dropXp(level), density);
+// }

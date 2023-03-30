@@ -8,7 +8,6 @@ import { performance } from "perf_hooks";
 
 export const ADVANCEMENT_XP = 200; // Cover Me in Debris gives 100 XP; Serious Dedication gives another 100
 
-const GENERATOR_TIMEOUT = 10; // seconds
 const CHUTE_SPEED = 20; // m/s
 // const G = -20; // m/s/s
 // const G = -50; // m/s/s
@@ -20,11 +19,6 @@ const INVENTORY_START_SLOT = 58;
 
 export interface GeneratorConfig {
 	relativeContainerLocation: Vec3;
-}
-
-export interface CondenserConfig {
-	username: string;
-	targetAmount: number;
 }
 
 class XpBot extends Blonbot {
@@ -71,56 +65,6 @@ class XpBot extends Blonbot {
 	}
 }
 
-export class XpCondenser extends XpBot {
-	targetAmount: number;
-	timingCb: (time: number) => void;
-	exiting: boolean;
-	constructor(config: BotConfig, condenserConfig: CondenserConfig, timingCb: (time: number) => void) {
-		super(config);
-		this.condense = this.condense.bind(this);
-		this.targetAmount = condenserConfig.targetAmount;
-		this.exiting = false;
-		this.timingCb = timingCb;
-	}
-	async condense(): Promise<void> {
-		if (!this.position) {
-			const { x, y, z } = await this.recv("position");
-			this.position = new Vec3(x, y, z);
-		}
-		
-		this.respawn();
-
-		let state = "condensing";
-		let experience = 0;
-		let initialPosition = this.position.clone();
-
-		this.client.on("experience", ({totalExperience}) => {
-			experience = totalExperience;
-		});
-
-		this.client.on("update_health", ({health}) => {
-			if (health === 0) {
-				this.client.write("client_command", { actionId: 0 });
-			}
-		});
-
-		while (true) {
-			if (state === "condensing") {
-				if (experience >= this.targetAmount) {
-					state = "suiciding";
-					const startTime = performance.now() / 1000;
-					this.suicide(30).then(() => {
-						const endTime = performance.now() / 1000;
-						this.timingCb(endTime - startTime);
-						state = "condensing";
-					});
-				}
-			}
-			await util.sleep(1 / util.TPS);
-		}
-	}
-}
-
 export class XpGenerator extends XpBot {
 	relativeContainerLocation: Vec3;
 	actionCounter: number;
@@ -128,22 +72,6 @@ export class XpGenerator extends XpBot {
 		super(config);
 		this.actionCounter = 1;
 		this.relativeContainerLocation = generatorConfig.relativeContainerLocation;
-	}
-	async generateOrTimeOut(): Promise<void> {
-		let timeout: NodeJS.Timeout;
-		const timeoutPromise = new Promise<void>((resolve, reject) => {
-			timeout = setTimeout(() => {
-				console.log(`Bot ${this.username} timed out. Disconnecting.`);
-				this.disconnect();
-				resolve();
-			}, 1000 * GENERATOR_TIMEOUT);
-		});
-		return Promise.race([
-			timeoutPromise,
-			this.generate().then(() => {
-				clearTimeout(timeout);
-			}),
-		]);
 	}
 	async generate(): Promise<void> {
 		if (!this.position) {
@@ -283,6 +211,12 @@ export class XpGenerator extends XpBot {
 			this.client.write("window_click", p);
 		}
 		this.client.write("close_window", { retrieveWindowId });
+
+		// % chance to fail! for testing
+		// if (Math.random() < 0.01) {
+		// 	console.log(`Bot ${this.username} is failing!`);
+		// 	await new Promise(() => {});
+		// }
 	}
 }
 
